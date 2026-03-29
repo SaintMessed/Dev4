@@ -1,0 +1,41 @@
+name: DevSecOps Pipeline
+
+on:
+  pull_request:
+    branches: ["dev"]
+
+jobs:
+  code-quality:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install flake8
+        run: pip install flake8
+
+      - name: Run linter
+        run: flake8 . > report.txt || true
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: report
+          path: report.txt
+
+  notify:
+    needs: code-quality
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send Telegram
+        run: |
+          curl -X POST https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage \
+          -d chat_id=${{ secrets.CHAT_ID }} \
+          -d text="✅ PR выполнен: ${{ github.event.pull_request.title }}"
